@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Calendar</title>
+  <style>
+    :root {
+      --bg: #f5f2ec;
+      --ink: #1e2226;
+      --muted: #66707a;
+      --surface: #ffffff;
+      --line: #d9d5cd;
+      --shadow: 0 16px 48px rgba(53, 42, 32, 0.13);
+      --empty: #f9f8f5;
+      --one-bg: #dcefe7;
+      --one-fg: #116149;
+      --two-bg: #ffe8af;
+      --two-fg: #6e4b00;
+      --three-bg: #f8c6bb;
+      --three-fg: #7b211e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(160deg, rgba(72, 139, 173, 0.16), transparent 36rem),
+        linear-gradient(22deg, rgba(212, 85, 65, 0.11), transparent 31rem),
+        var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 16px clamp(16px, 4vw, 48px);
+      background: rgba(245, 242, 236, 0.86);
+      border-bottom: 1px solid rgba(113, 101, 86, 0.2);
+      backdrop-filter: blur(14px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3.5vw, 2.4rem);
+      font-weight: 760;
+      line-height: 1;
+    }
+
+    .total {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 112px;
+      padding: 10px 14px;
+      background: #1f272b;
+      border-radius: 8px;
+      color: #fff;
+      box-shadow: 0 8px 22px rgba(31, 39, 43, 0.18);
+    }
+
+    .total-label {
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 0.82rem;
+      font-weight: 680;
+      text-transform: uppercase;
+    }
+
+    .total-value {
+      min-width: 2ch;
+      font-size: clamp(1.35rem, 4vw, 2rem);
+      font-variant-numeric: tabular-nums;
+      font-weight: 780;
+      line-height: 1;
+      text-align: right;
+    }
+
+    .sync-status {
+      grid-column: 1 / -1;
+      min-height: 1.2em;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 620;
+    }
+
+    main {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: clamp(16px, 4vw, 48px);
+    }
+
+    .months {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: clamp(16px, 3vw, 28px);
+    }
+
+    .past-months-button {
+      display: block;
+      width: 100%;
+      padding: 13px 16px;
+      border: 1px solid rgba(114, 104, 91, 0.24);
+      border-radius: 8px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 8px 24px rgba(53, 42, 32, 0.07);
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 720;
+      text-align: left;
+      transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .past-months-button:hover,
+    .past-months-button:focus-visible {
+      color: var(--ink);
+      background: var(--surface);
+      outline: 3px solid rgba(36, 115, 155, 0.22);
+      outline-offset: 2px;
+      transform: translateY(-1px);
+    }
+
+    .month {
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid rgba(114, 104, 91, 0.2);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      scroll-margin-top: 96px;
+    }
+
+    .month-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 60px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .month-title {
+      margin: 0;
+      font-size: clamp(1.12rem, 2.5vw, 1.5rem);
+      font-weight: 740;
+      line-height: 1.1;
+    }
+
+    .month-total {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .weekday-row,
+    .day-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .weekday {
+      padding: 10px 4px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      font-size: 0.73rem;
+      font-weight: 760;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .day-grid {
+      background: var(--line);
+      gap: 1px;
+    }
+
+    .blank,
+    .day {
+      min-width: 0;
+      aspect-ratio: 1 / 0.82;
+      border: 0;
+    }
+
+    .blank {
+      background: #f1eee7;
+    }
+
+    .day {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto minmax(18px, 1fr);
+      align-items: center;
+      justify-items: center;
+      min-height: 54px;
+      padding: 8px 4px 7px;
+      color: var(--ink);
+      background: var(--empty);
+      cursor: pointer;
+      transition:
+        background 160ms ease,
+        color 160ms ease,
+        transform 160ms ease,
+        box-shadow 160ms ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .day:hover,
+    .day:focus-visible {
+      z-index: 1;
+      outline: 3px solid rgba(36, 115, 155, 0.28);
+      outline-offset: -3px;
+      transform: translateY(-1px);
+    }
+
+    .day-number {
+      align-self: start;
+      justify-self: start;
+      padding-left: 2px;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 720;
+      line-height: 1;
+    }
+
+    .checkmarks {
+      align-self: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 22px;
+      color: currentColor;
+      font-size: clamp(1.02rem, 4.2vw, 1.42rem);
+      font-weight: 780;
+      gap: 1px;
+      line-height: 1;
+    }
+
+    .day[data-count="1"] {
+      color: var(--one-fg);
+      background: var(--one-bg);
+      box-shadow: inset 0 0 0 2px rgba(17, 97, 73, 0.12);
+    }
+
+    .day[data-count="2"] {
+      color: var(--two-fg);
+      background: var(--two-bg);
+      box-shadow: inset 0 0 0 2px rgba(110, 75, 0, 0.13);
+    }
+
+    .day[data-count="3"] {
+      color: var(--three-fg);
+      background: var(--three-bg);
+      box-shadow: inset 0 0 0 2px rgba(123, 33, 30, 0.13);
+    }
+
+    @media (min-width: 760px) {
+      .months {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .blank,
+      .day {
+        aspect-ratio: 1 / 0.86;
+      }
+    }
+
+    @media (min-width: 1120px) {
+      main {
+        width: min(1340px, 100%);
+      }
+
+      .months {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .month-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .month-total {
+        font-size: 0.84rem;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .app-header {
+        grid-template-columns: 1fr;
+      }
+
+      .total {
+        justify-content: space-between;
+      }
+
+      .weekday {
+        font-size: 0.68rem;
+      }
+
+      .blank,
+      .day {
+        aspect-ratio: 1 / 1;
+      }
+
+      .day {
+        min-height: 46px;
+        padding: 6px 3px 5px;
+      }
+
+      .day-number {
+        font-size: 0.78rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Calendar</h1>
+    <div class="total" aria-live="polite">
+      <span class="total-label">Total</span>
+      <span class="total-value" id="total">0</span>
+    </div>
+    <div class="sync-status" id="sync-status" aria-live="polite"></div>
+  </header>
+
+  <main>
+    <section class="months" id="months" aria-label="Calendar months"></section>
+  </main>
+
+  <script>
+    (() => {
+      const LOG_KEY = "cal-checkmark-log-v1";
+      const API_URL = "./api.php";
+      const SYNC_INTERVAL_MS = 15000;
+      const MONTHS = [
+        { year: 2026, month: 5 },
+        { year: 2026, month: 6 },
+        { year: 2026, month: 7 },
+        { year: 2026, month: 8 },
+        { year: 2026, month: 9 },
+        { year: 2026, month: 10 }
+      ];
+      const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const monthFormatter = new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        year: "numeric"
+      });
+      const dateFormatter = new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      });
+
+      const monthsEl = document.getElementById("months");
+      const totalEl = document.getElementById("total");
+      const syncStatusEl = document.getElementById("sync-status");
+      const state = new Map();
+      let syncEnabled = false;
+      let log = loadLog();
+
+      replayLog();
+      renderCalendar();
+      updateTotals();
+      syncFromServer();
+      window.setInterval(syncFromServer, SYNC_INTERVAL_MS);
+
+      window.addEventListener("storage", (event) => {
+        if (event.key !== LOG_KEY) return;
+        log = loadLog();
+        state.clear();
+        replayLog();
+        syncAllDays();
+        updateTotals();
+      });
+
+      function loadLog() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function replayLog() {
+        state.clear();
+        for (const entry of log) {
+          if (!entry || typeof entry.date !== "string") continue;
+          const value = Number(entry.value);
+          if (!Number.isInteger(value) || value < 0 || value > 3) continue;
+          state.set(entry.date, value);
+        }
+      }
+
+      async function persist(date, value) {
+        const entry = {
+          date,
+          value,
+          at: new Date().toISOString()
+        };
+        log.push(entry);
+        localStorage.setItem(LOG_KEY, JSON.stringify(log));
+
+        try {
+          const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({ date, value })
+          });
+          if (!response.ok) throw new Error("Sync failed");
+          const payload = await response.json();
+          syncEnabled = true;
+          if (Array.isArray(payload.entries)) {
+            applyLog(payload.entries);
+          }
+          setSyncStatus("Synced");
+        } catch {
+          syncEnabled = false;
+          setSyncStatus("Saved on this browser");
+        }
+      }
+
+      async function syncFromServer() {
+        try {
+          const response = await fetch(API_URL, {
+            cache: "no-store",
+            credentials: "same-origin"
+          });
+          if (!response.ok) throw new Error("Sync unavailable");
+          const payload = await response.json();
+          if (!Array.isArray(payload.entries)) throw new Error("Invalid sync payload");
+          if (payload.entries.length === 0 && log.length > 0) {
+            await seedServerLog();
+            return;
+          }
+          syncEnabled = true;
+          applyLog(payload.entries);
+          setSyncStatus("Synced across browsers");
+        } catch {
+          syncEnabled = false;
+          setSyncStatus("Saved on this browser");
+        }
+      }
+
+      function applyLog(nextLog) {
+        log = nextLog;
+        localStorage.setItem(LOG_KEY, JSON.stringify(log));
+        replayLog();
+        syncAllDays();
+        updateTotals();
+      }
+
+      async function seedServerLog() {
+        syncEnabled = true;
+        const localEntries = log.slice();
+        for (const entry of localEntries) {
+          if (!entry || typeof entry.date !== "string") continue;
+          const value = Number(entry.value);
+          if (!Number.isInteger(value) || value < 0 || value > 3) continue;
+
+          const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({ date: entry.date, value })
+          });
+
+          if (!response.ok) throw new Error("Could not seed sync log");
+        }
+
+        const response = await fetch(API_URL, {
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+        if (!response.ok) throw new Error("Could not reload sync log");
+        const payload = await response.json();
+        if (!Array.isArray(payload.entries)) throw new Error("Invalid sync payload");
+        applyLog(payload.entries);
+        setSyncStatus("Synced across browsers");
+      }
+
+      function setSyncStatus(message) {
+        syncStatusEl.textContent = message;
+      }
+
+      function renderCalendar() {
+        const fragment = document.createDocumentFragment();
+        const currentMonth = findCurrentMonth();
+        const pastMonths = document.createDocumentFragment();
+        let hasPastMonths = false;
+
+        for (const monthInfo of MONTHS) {
+          const month = monthKey(monthInfo.year, monthInfo.month);
+          if (month < currentMonth) {
+            pastMonths.appendChild(renderMonth(monthInfo.year, monthInfo.month));
+            hasPastMonths = true;
+          } else {
+            fragment.appendChild(renderMonth(monthInfo.year, monthInfo.month));
+          }
+        }
+
+        if (hasPastMonths) {
+          const pastButton = document.createElement("button");
+          pastButton.className = "past-months-button";
+          pastButton.type = "button";
+          pastButton.textContent = "View Past Months";
+          pastButton.addEventListener("click", () => {
+            pastButton.replaceWith(pastMonths);
+          });
+          fragment.insertBefore(pastButton, fragment.firstChild);
+        }
+
+        monthsEl.replaceChildren(fragment);
+      }
+
+      function renderMonth(year, month) {
+        const section = document.createElement("section");
+        section.className = "month";
+        section.dataset.month = monthKey(year, month);
+
+        const header = document.createElement("header");
+        header.className = "month-header";
+
+        const title = document.createElement("h2");
+        title.className = "month-title";
+        title.textContent = monthFormatter.format(new Date(year, month, 1));
+
+        const count = document.createElement("span");
+        count.className = "month-total";
+        count.dataset.monthTotal = monthKey(year, month);
+        count.textContent = "0 checks";
+
+        header.append(title, count);
+        section.appendChild(header);
+
+        const weekdayRow = document.createElement("div");
+        weekdayRow.className = "weekday-row";
+        weekdayRow.setAttribute("aria-hidden", "true");
+        for (const dayName of WEEKDAYS) {
+          const weekday = document.createElement("div");
+          weekday.className = "weekday";
+          weekday.textContent = dayName;
+          weekdayRow.appendChild(weekday);
+        }
+        section.appendChild(weekdayRow);
+
+        const grid = document.createElement("div");
+        grid.className = "day-grid";
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const dayCount = new Date(year, month + 1, 0).getDate();
+
+        for (let index = 0; index < firstDay; index += 1) {
+          const blank = document.createElement("div");
+          blank.className = "blank";
+          grid.appendChild(blank);
+        }
+
+        for (let day = 1; day <= dayCount; day += 1) {
+          grid.appendChild(renderDay(year, month, day));
+        }
+
+        section.appendChild(grid);
+        return section;
+      }
+
+      function renderDay(year, month, day) {
+        const date = dateKey(year, month, day);
+        const button = document.createElement("button");
+        button.className = "day";
+        button.type = "button";
+        button.dataset.date = date;
+
+        const number = document.createElement("span");
+        number.className = "day-number";
+        number.textContent = String(day);
+
+        const checkmarks = document.createElement("span");
+        checkmarks.className = "checkmarks";
+        checkmarks.setAttribute("aria-hidden", "true");
+
+        button.append(number, checkmarks);
+        button.addEventListener("click", () => {
+          const nextValue = ((state.get(date) || 0) + 1) % 4;
+          state.set(date, nextValue);
+          persist(date, nextValue);
+          syncDay(button, nextValue);
+          updateTotals();
+        });
+
+        syncDay(button, state.get(date) || 0);
+        return button;
+      }
+
+      function syncAllDays() {
+        for (const button of document.querySelectorAll(".day")) {
+          syncDay(button, state.get(button.dataset.date) || 0);
+        }
+      }
+
+      function syncDay(button, value) {
+        const date = parseDateKey(button.dataset.date);
+        const label = dateFormatter.format(date);
+        const checkmarks = button.querySelector(".checkmarks");
+        button.dataset.count = String(value);
+        checkmarks.textContent = "✓".repeat(value);
+        button.setAttribute("aria-label", `${label}, ${value} checkmarks`);
+      }
+
+      function updateTotals() {
+        let total = 0;
+        const monthTotals = new Map();
+
+        for (const monthInfo of MONTHS) {
+          monthTotals.set(monthKey(monthInfo.year, monthInfo.month), 0);
+        }
+
+        for (const [date, value] of state) {
+          total += value;
+          const key = date.slice(0, 7);
+          if (monthTotals.has(key)) {
+            monthTotals.set(key, monthTotals.get(key) + value);
+          }
+        }
+
+        totalEl.textContent = String(total);
+        for (const [key, value] of monthTotals) {
+          const el = document.querySelector(`[data-month-total="${key}"]`);
+          if (el) {
+            el.textContent = `${value} ${value === 1 ? "check" : "checks"}`;
+          }
+        }
+      }
+
+      function findCurrentMonth() {
+        const today = new Date();
+        const currentMonth = monthKey(today.getFullYear(), today.getMonth());
+        if (MONTHS.some((monthInfo) => monthKey(monthInfo.year, monthInfo.month) === currentMonth)) {
+          return currentMonth;
+        }
+
+        const updatedMonth = findMostRecentlyUpdatedMonth();
+        if (updatedMonth) return updatedMonth;
+
+        return monthKey(MONTHS[0].year, MONTHS[0].month);
+      }
+
+      function findMostRecentlyUpdatedMonth() {
+        for (let index = log.length - 1; index >= 0; index -= 1) {
+          const entry = log[index];
+          if (!entry || typeof entry.date !== "string") continue;
+          const month = entry.date.slice(0, 7);
+          if (MONTHS.some((monthInfo) => monthKey(monthInfo.year, monthInfo.month) === month)) {
+            return month;
+          }
+        }
+
+        return null;
+      }
+
+      function dateKey(year, month, day) {
+        return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      }
+
+      function monthKey(year, month) {
+        return `${year}-${String(month + 1).padStart(2, "0")}`;
+      }
+
+      function parseDateKey(key) {
+        const [year, month, day] = key.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      }
+    })();
+  </script>
+</body>
+</html>
