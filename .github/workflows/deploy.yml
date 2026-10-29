@@ -38,10 +38,10 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-          SSH_PATH: ${{ secrets.SSH_PATH }}
+          SSH_PATH: ${{ secrets.SSH_PATH || '.' }}
           DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
         run: |
           rsync -rlvz --checksum --itemize-changes $DRY_RUN \
             --exclude-from=.deployignore \
-            -e "ssh -p $SSH_PORT -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes" \
+            -e "ssh -p $SSH_PORT -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o BatchMode=yes" \
             ./ "$SSH_USER@$SSH_HOST:${SSH_PATH%/}/"
