@@ -4,8 +4,10 @@
 # Repo-only files
 .git/
 .github/
+.claude/
 .deployignore
-README.md
+.gitignore
+*.md
 
 # Server-side data written by cal/api.php
 cal/*.json

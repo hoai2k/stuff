@@ -3,12 +3,18 @@ name: Deploy
 on:
   push:
     branches: [deploy]
+    paths-ignore:
+      - '**.md'
+      - '.claude/**'
   workflow_dispatch:
     inputs:
       dry_run:
         description: "List what would change without uploading"
         type: boolean
         default: true
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy
@@ -17,6 +23,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # a hung run otherwise bills up to 6 h
     steps:
       - uses: actions/checkout@v4
 
