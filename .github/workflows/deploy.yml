@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [deploy]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -16,8 +16,6 @@ concurrency:
 
 jobs:
   deploy:
-    # Pushes deploy only once the DEPLOY_ENABLED repository variable is "true".
-    if: github.event_name == 'workflow_dispatch' || vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
