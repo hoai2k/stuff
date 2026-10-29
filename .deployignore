@@ -1,0 +1,14 @@
+# Never uploaded by .github/workflows/deploy.yml. The deploy also never
+# deletes server files, so anything listed here is left as it is on the server.
+
+# Repo-only files
+.git/
+.github/
+.deployignore
+README.md
+
+# Server-side data written by cal/api.php
+cal/*.json
+cal/*.log
+cal/*.txt
+cal/data/
